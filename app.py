@@ -177,7 +177,7 @@ def end_session():
         """, (end_time_str, final_duration, how_it_went, notes, active_session['id']))
         db.commit()
             
-    return redirect(url_for('index'))
+    return redirect(url_for('history'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -200,3 +200,22 @@ if __name__ == '__main__':
         print("🆕 Yeni temiz veritabanı kuruldu.")
         
     app.run(debug=True)
+
+@app.route('/history')
+def history():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    sessions = db.execute('''
+        SELECT course_name, duration_minutes, how_it_went, notes, end_time 
+        FROM study_sessions 
+        WHERE user_id = ? 
+        ORDER BY end_time DESC
+    ''', (session['user_id'],)).fetchall()
+    
+    return render_template('history.html', sessions=sessions)
+
+# Veritabanı mesajı ve app.run her zaman EN ALTTA kalmalı:
+print("🆕 Yeni temiz veritabanı kuruldu.")
+app.run(debug=True)

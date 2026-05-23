@@ -15,8 +15,14 @@ CREATE TABLE IF NOT EXISTS study_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL,
-    duration_minutes INTEGER NOT NULL,
-    session_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id),
-    FOREIGN KEY (course_id) REFERENCES courses (id)
+    start_time TEXT NOT NULL,
+    end_time TEXT,
+    duration_minutes INTEGER DEFAULT 0,
+    how_it_went TEXT,
+    notes TEXT,
+    pomo_mode TEXT DEFAULT 'regular',       -- 'regular' veya 'pomodoro'
+    pomo_state TEXT DEFAULT 'study',       -- 'study' veya 'break'
+    last_state_change TEXT,                -- Durumun en son ne zaman değiştiği
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(course_id) REFERENCES courses(id)
 );

@@ -9,11 +9,6 @@
         body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .navbar-dark { background-color: #1e293b !important; }
         .card { border: none; border-radius: 12px; }
-        .stat-card { transition: transform 0.2s; border-left: 5px solid; }
-        .stat-card:hover { transform: translateY(-3px); }
-        .stat-total { border-left-color: #6366f1; } 
-        .stat-top { border-left-color: #10b981; }   
-        .stat-rate { border-left-color: #f59e0b; }  
         .btn-modern { border-radius: 8px; padding: 10px 20px; font-weight: 600; }
         .timer-box { font-size: 3.5rem; letter-spacing: 2px; color: #1e293b; background: #e2e8f0; border-radius: 12px; padding: 15px; }
     </style>
@@ -33,47 +28,22 @@
 
     <div class="container">
         
-        <div class="row mb-4 g-3">
-            <div class="col-md-4">
-                <div class="card bg-white shadow-sm stat-card stat-total">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted text-uppercase fw-bold m-0">Weekly Target Progress</small>
-                            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 fw-bold" data-bs-toggle="modal" data-bs-target="#setGoalModal" style="font-size: 0.75rem;">
-                                ⚙️ Set Goal
-                            </button>
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card bg-white shadow-sm p-4 border-start border-primary border-5">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold d-block mb-1">Weekly Overview (Since Monday)</small>
+                            <h2 class="fw-bold m-0 text-dark">{{ this_week_hours }} hours, {{ this_week_minutes }} minutes</h2>
                         </div>
-                        <h3 class="fw-bold m-0 text-dark">{{ total_mins }} / {{ weekly_target }} mins</h3>
-                        
-                        <div class="progress mt-2" style="height: 6px;">
-                            <div class="progress-bar" role="progressbar" 
-                                 style="width: {{ progress_percent }}%; background-color: #6366f1;" 
-                                 aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
-                            </div>
-                        </div>
-                        <small class="text-muted pt-1 d-block" style="font-size: 0.75rem;">%{{ progress_percent }} of your personal goal completed</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card bg-white shadow-sm stat-card stat-top">
-                    <div class="card-body">
-                        <small class="text-muted text-uppercase fw-bold d-block mb-1">Top Focus Course</small>
-                        <h3 class="fw-bold m-0 text-dark text-truncate">{{ top_course }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-white shadow-sm stat-card stat-rate">
-                    <div class="card-body">
-                        <small class="text-muted text-uppercase fw-bold d-block mb-1">Productivity Rate</small>
-                        <h3 class="fw-bold m-0 text-dark">%{{ prod_rate }}</h3>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-modern" data-bs-toggle="modal" data-bs-target="#setGoalModal">
+                            ⚙️ Set Goal
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-
+        
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card shadow-sm bg-white">
@@ -139,7 +109,6 @@
                                 </button>
                             </div>
                         {% endif %}
-
                     </div>
                 </div>
             </div>
@@ -222,12 +191,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const courseSelect = document.getElementById('courseSelect');
             const startBtn = document.getElementById('startBtn');
-            
             function checkSelection() {
                 if (courseSelect && courseSelect.value !== "") {
                     startBtn.removeAttribute('disabled');
@@ -237,31 +204,25 @@
                     startBtn.disabled = true;
                 }
             }
-
             if (courseSelect) {
                 courseSelect.addEventListener('change', checkSelection);
                 checkSelection();
             }
         });
-
         {% if active_session %}
             let timeSeconds = parseInt("{{ time_left }}");
             const mode = "{{ pomo_mode }}";
             let timerInterval;
             let isPaused = false;
-
             function renderDisplay(totalSecs) {
                 let hours = Math.floor(totalSecs / 3600);
                 let minutes = Math.floor((totalSecs % 3600) / 60);
                 let secs = totalSecs % 60;
-                
                 let displayElement = document.getElementById('timerDisplay');
                 if (displayElement) {
-                    displayElement.innerText = 
-                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    displayElement.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
                 }
             }
-
             function togglePause() {
                 const btn = document.getElementById('togglePauseBtn');
                 if (!isPaused) {
@@ -271,68 +232,42 @@
                     btn.classList.replace('btn-warning', 'btn-success');
                 } else {
                     isPaused = false;
-                    if (mode === 'pomodoro') {
-                        timerInterval = setInterval(runBackwards, 1000);
-                    } else {
-                        timerInterval = setInterval(runForwards, 1000);
-                    }
+                    if (mode === 'pomodoro') { timerInterval = setInterval(runBackwards, 1000); }
+                    else { timerInterval = setInterval(runForwards, 1000); }
                     btn.innerText = "⏸️ Pause";
                     btn.classList.replace('btn-success', 'btn-warning');
                 }
             }
-
             function runBackwards() {
-                if (timeSeconds <= 0) {
-                    clearInterval(timerInterval);
-                    window.location.reload();
-                    return;
-                }
+                if (timeSeconds <= 0) { clearInterval(timerInterval); window.location.reload(); return; }
                 renderDisplay(timeSeconds);
                 timeSeconds--;
             }
-
             function runForwards() {
                 renderDisplay(timeSeconds);
                 timeSeconds++;
             }
-
-            if (mode === 'pomodoro') {
-                timerInterval = setInterval(runBackwards, 1000);
-                runBackwards();
-            } else {
-                timerInterval = setInterval(runForwards, 1000);
-                runForwards();
-            }
-
-            function stopInterval() {
-                clearInterval(timerInterval);
-            }
+            if (mode === 'pomodoro') { timerInterval = setInterval(runBackwards, 1000); runBackwards(); }
+            else { timerInterval = setInterval(runForwards, 1000); runForwards(); }
+            function stopInterval() { clearInterval(timerInterval); }
         {% endif %}
-
         const endForm = document.getElementById('endSessionForm');
         if (endForm) {
             endForm.addEventListener('submit', function() {
                 const displayElement = document.getElementById('timerDisplay');
-                let totalSecs = 1; 
-
+                let totalSecs = 1;
                 if (displayElement) {
                     let display = displayElement.innerText.trim();
                     let parts = display.split(':');
-                    
                     if (parts.length === 3) {
                         let hours = parseInt(parts[0], 10) || 0;
                         let minutes = parseInt(parts[1], 10) || 0;
                         let seconds = parseInt(parts[2], 10) || 0;
-                        
                         totalSecs = (hours * 3600) + (minutes * 60) + seconds;
-                        
                         let isPomodoro = "{{ pomo_mode }}" === "pomodoro";
-                        if (isPomodoro) {
-                            totalSecs = (25 * 60) - totalSecs;
-                        }
+                        if (isPomodoro) { totalSecs = (25 * 60) - totalSecs; }
                     }
                 }
-                
                 if (totalSecs <= 0) totalSecs = 1;
                 document.getElementById('elapsed_seconds_input').value = totalSecs;
             });

@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
+import os
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_study_planner'
-
-import os
 
 def get_db_connection():
     db_exists = os.path.exists('database.db')
@@ -44,6 +43,28 @@ def index():
     
     # İlerleme yüzdesi hesabı (%100'ü aşmasın)
     progress_percent = min(int((weekly_mins / weekly_target) * 100), 100)
+
+    # =========================================================================
+    # [US-04] ADIM 1: Mevcut Haftanın Başlangıcından (Pazartesi) İtibaren Toplam Süre
+    # =========================================================================
+    today = datetime.now()
+    # Bu haftanın Pazartesi gününün başlangıcını buluyoruz (00:00:00)
+    start_of_this_week = today - timedelta(days=today.weekday())
+    start_of_this_week = start_of_this_week.replace(hour=0, minute=0, second=0, microsecond=0)
+    start_of_week_str = start_of_this_week.strftime('%Y-%m-%d %H:%M:%S')
+
+    current_week_query = conn.execute('''
+        SELECT SUM(duration_minutes) 
+        FROM study_sessions 
+        WHERE user_id = ? AND end_time >= ?
+    ''', (user_id, start_of_week_str)).fetchone()
+
+    total_seconds_this_week = current_week_query[0] if current_week_query[0] is not None else 0
+    
+    # Veritabanında saniye tutulduğu için Saat ve Dakikaya bölüyoruz
+    this_week_hours = total_seconds_this_week // 3600
+    this_week_minutes = (total_seconds_this_week % 3600) // 60
+    # =========================================================================
 
     # 3. En Çok Çalışılan Ders (Top Focus Course)
     top_course_query = conn.execute('''
@@ -116,7 +137,9 @@ def index():
                            pomo_mode=pomo_mode,
                            pomo_state=pomo_state,
                            active_course=active_course,
-                           latest_sessions=latest_sessions)
+                           latest_sessions=latest_sessions,
+                           this_week_hours=this_week_hours,
+                           this_week_minutes=this_week_minutes)
 
 @app.route('/update_target', methods=['POST'])
 def update_target():

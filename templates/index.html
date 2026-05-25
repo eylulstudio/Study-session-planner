@@ -5,87 +5,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Session Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar-dark { background-color: #1e293b !important; }
+        .card { border: none; border-radius: 12px; }
+        .stat-card { transition: transform 0.2s; border-left: 5px solid; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-total { border-left-color: #6366f1; } 
+        .stat-top { border-left-color: #10b981; }   
+        .stat-rate { border-left-color: #f59e0b; }  
+        .btn-modern { border-radius: 8px; padding: 10px 20px; font-weight: 600; }
+        .timer-box { font-size: 3.5rem; letter-spacing: 2px; color: #1e293b; background: #e2e8f0; border-radius: 12px; padding: 15px; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-dark mb-4 shadow-sm">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">📅 Study Planner</span>
+            <span class="navbar-brand mb-0 h1 fw-bold">📅 Study Session Planner</span>
             <div class="d-flex align-items-center">
-                <span class="text-light me-3">Welcome, <strong>{{ session['username'] }}</strong></span>
-                <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
+                <span class="text-light me-3">Welcome, <strong class="text-warning">{{ session['username'] }}</strong></span>
+                <a href="/history" class="btn btn-sm btn-outline-info btn-modern me-2">📊 View History</a>
+                <a href="/logout" class="btn btn-sm btn-outline-danger btn-modern">Logout</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
-        <div class="row mb-4">
-            <div class="col-md-4"><div class="card text-white bg-primary shadow text-center"><div class="card-body"><h6 class="text-uppercase">Total Study</h6><h2 class="fw-bold">{{ total_mins }} mins</h2></div></div></div>
-            <div class="col-md-4"><div class="card text-white bg-success shadow text-center"><div class="card-body"><h6 class="text-uppercase">Top Course</h6><h2 class="fw-bold text-truncate">{{ top_course }}</h2></div></div></div>
-            <div class="col-md-4"><div class="card text-white bg-info shadow text-center"><div class="card-body"><h6 class="text-uppercase">Productivity Rate</h6><h2 class="fw-bold">%{{ prod_rate }}</h2></div></div></div>
+        
+        <div class="row mb-4 g-3">
+            
+            <div class="col-md-4">
+                <div class="card bg-white shadow-sm stat-card stat-total">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted text-uppercase fw-bold m-0">Weekly Target Progress</small>
+                            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 fw-bold" data-bs-toggle="modal" data-bs-target="#setGoalModal" style="font-size: 0.75rem;">
+                                ⚙️ Set Goal
+                            </button>
+                        </div>
+                        <h3 class="fw-bold m-0 text-dark">{{ total_mins }} / {{ weekly_target }} mins</h3>
+                        
+                        <div class="progress mt-2" style="height: 6px;">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ progress_percent }}%; background-color: #6366f1;" 
+                                 aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                        <small class="text-muted pt-1 d-block" style="font-size: 0.75rem;">%{{ progress_percent }} of your personal goal completed</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card bg-white shadow-sm stat-card stat-top">
+                    <div class="card-body">
+                        <small class="text-muted text-uppercase fw-bold d-block mb-1">Top Focus Course</small>
+                        <h3 class="fw-bold m-0 text-dark text-truncate">{{ top_course }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-white shadow-sm stat-card stat-rate">
+                    <div class="card-body">
+                        <small class="text-muted text-uppercase fw-bold d-block mb-1">Productivity Rate</small>
+                        <h3 class="fw-bold m-0 text-dark">%{{ prod_rate }}</h3>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <div class="card shadow">
-                    <div class="card-body text-center">
+                <div class="card shadow-sm bg-white">
+                    <div class="card-body d-flex flex-column justify-content-center text-center p-4">
                         
                         {% if not active_session %}
-                            <h5 class="card-title mb-4">Ready to study?</h5>
+                            <h4 class="fw-bold text-dark mb-4">Launch Study Session</h4>
                             <form action="/start" method="POST" id="startForm">
-                               <div class="mb-3 text-start">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <label class="form-label fw-bold mb-0">1. Select Course</label>
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#addCourseModal">
-            ➕ Add Custom Course
-        </button>
-    </div>
-    <select name="course_id" id="courseSelect" class="form-select" required>
-        <option value="" disabled selected>-- Choose a Course --</option>
-        {% for course in courses %}
-            <option value="{{ course.id }}">{{ course.course_name }}</option>
-        {% endfor %}
-    </select>
-</div>
+                                <div class="mb-3 text-start">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-bold small text-muted text-uppercase m-0">1. Select Course</label>
+                                        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 fw-bold" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+                                            + New Course
+                                        </button>
+                                    </div>
+                                    <select name="course_id" id="courseSelect" class="form-select form-select-lg" style="border-radius: 8px;" required>
+                                        <option value="" disabled selected>-- Choose a Course --</option>
+                                        {% for course in courses %}
+                                            <option value="{{ course.id }}">{{ course.course_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                                 <div class="mb-4 text-start">
-                                    <label class="form-label fw-bold">2. Select Study Mode</label>
-                                    <div class="d-flex gap-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="study_mode" id="modeRegular" value="regular" checked>
-                                            <label class="form-check-label" for="modeRegular">⏱️ Regular Timer</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="study_mode" id="modePomodoro" value="pomodoro">
-                                            <label class="form-check-label" for="modePomodoro">🍅 Pomodoro (25 min Loop)</label>
-                                        </div>
+                                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">2. Select Method</label>
+                                    <div class="d-flex gap-2">
+                                        <input type="radio" class="btn-check" name="study_mode" id="modeRegular" value="regular" checked autocomplete="off">
+                                        <label class="btn btn-outline-secondary w-50 btn-modern" for="modeRegular">⏱️ Regular</label>
+
+                                        <input type="radio" class="btn-check" name="study_mode" id="modePomodoro" value="pomodoro" autocomplete="off">
+                                        <label class="btn btn-outline-secondary w-50 btn-modern" for="modePomodoro">🍅 Pomodoro</label>
                                     </div>
                                 </div>
 
-                                <button type="submit" id="startBtn" class="btn btn-primary btn-lg w-100" disabled>
-                                    🚀 Start Session
+                                <button type="submit" id="startBtn" class="btn btn-primary btn-lg w-100 btn-modern shadow" disabled>
+                                    Start Session 🚀
                                 </button>
                             </form>
 
                         {% else %}
                             {% if pomo_mode == 'pomodoro' %}
                                 {% if pomo_state == 'study' %}
-                                    <h5 class="card-title text-danger mb-2">🔥 Deep Work Block</h5>
-                                    <div class="badge bg-danger mb-3">Study Dynamic</div>
+                                    <h5 class="text-danger fw-bold mb-1">🔥 Deep Work Block</h5>
+                                    <span class="badge bg-danger-subtle text-danger align-self-center mb-3">Study Mode</span>
                                 {% else %}
-                                    <h5 class="card-title text-warning mb-2">☕ Break Time</h5>
-                                    <div class="badge bg-warning text-dark mb-3">Rest Dynamic</div>
+                                    <h5 class="text-warning fw-bold mb-1">☕ Break Time</h5>
+                                    <span class="badge bg-warning-subtle text-warning align-self-center mb-3">Rest Mode</span>
                                 {% endif %}
                             {% else %}
-                                <h5 class="card-title text-success mb-2">⚡ Standard Session</h5>
-                                <div class="badge bg-success mb-3">Regular Mode</div>
+                                <h5 class="text-success fw-bold mb-1">⚡ Standard Tracking</h5>
+                                <span class="badge bg-success-subtle text-success align-self-center mb-3">Continuous Mode</span>
                             {% endif %}
 
-                            <p class="lead">Course: <strong>{{ active_course }}</strong></p>
+                            <p class="text-muted mb-3">Current Target: <strong class="text-dark">{{ active_course }}</strong></p>
                             
-                            <div class="display-4 my-4 text-dark font-monospace" id="timerDisplay">00:00:00</div>
+                            <div class="display-4 my-3 font-monospace fw-bold timer-box shadow-sm" id="timerDisplay">00:00:00</div>
                             
-                            <div class="d-flex gap-2 mb-3 justify-content-center">
-                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#reflectionModal" onclick="stopInterval()">
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-danger btn-lg w-100 btn-modern shadow-sm" data-bs-toggle="modal" data-bs-target="#reflectionModal" onclick="stopInterval()">
                                     🛑 End Session
                                 </button>
                             </div>
@@ -95,35 +142,76 @@
                 </div>
             </div>
         </div>
+
+    <div class="modal fade" id="setGoalModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header border-0 pb-0">
+                    <h6 class="modal-title fw-bold text-dark">Set Weekly Focus Goal</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="/update_target" method="POST">
+                    <div class="modal-body text-start">
+                        <label class="form-label small text-secondary fw-bold">Target Minutes</label>
+                        <input type="number" name="weekly_target" class="form-control" value="{{ weekly_target }}" min="1" required>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 btn-modern">Update Goal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
-    <div class="modal fade" id="reflectionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="reflectionModalLabel" aria-hidden="true">
+    <div class="modal fade" id="reflectionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="reflectionModalLabel">End & Reflect on Session</h5>
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header bg-dark text-white border-0">
+                    <h5 class="modal-title fw-bold">Session Review</h5>
                 </div>
-                <form action="/end" method="POST">
-                    <div class="modal-body">
-                        <p class="text-muted">Your study progress has been computed by the backend architecture. Please evaluate your session:</p>
-
+                <form action="/end" method="POST" id="endSessionForm">
+                    <div class="modal-body text-start">
+                        <p class="text-muted small">Provide performance meta-data:</p>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">How did it go? *</label>
+                            <label class="form-label fw-bold text-secondary small text-uppercase">How was your focus? *</label>
                             <select name="how_it_went" class="form-select" required>
-                                <option value="" disabled selected>-- Select Productivity --</option>
+                                <option value="" disabled selected>-- Evaluate Productivity --</option>
                                 <option value="Productive">🚀 Productive</option>
                                 <option value="Neutral">😐 Neutral</option>
                                 <option value="Distracted">📉 Distracted</option>
                             </select>
                         </div>
-
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Short Note (Optional)</label>
-                            <textarea name="notes" class="form-control" rows="3" placeholder="What did you achieve?"></textarea>
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Notes & Achievements</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Specify milestones completed..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-success w-100">Save Session & Sync Dashboard</button>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="submit" class="btn btn-success w-100 btn-modern">Commit Session to DB</button>
+                    </div>
+                    <input type="hidden" id="elapsed_seconds_input" name="elapsed_seconds" value="0">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addCourseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold text-dark">Add Custom Subject</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="/add_course" method="POST">
+                    <div class="modal-body text-start pt-0">
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Course Title</label>
+                            <input type="text" name="course_name" class="form-control" placeholder="e.g., Numerical Analysis" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light btn-modern" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-modern">Register Course</button>
                     </div>
                 </form>
             </div>
@@ -133,16 +221,28 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Ders seçimi koruması
-        const courseSelect = document.getElementById('courseSelect');
-        const startBtn = document.getElementById('startBtn');
-        if (courseSelect && startBtn) {
-            courseSelect.addEventListener('change', function() {
-                if (this.value !== "") startBtn.removeAttribute('disabled');
-            });
-        }
+        // Start butonu kilit açma mantığı (Garantili Mod)
+        document.addEventListener("DOMContentLoaded", function() {
+            const courseSelect = document.getElementById('courseSelect');
+            const startBtn = document.getElementById('startBtn');
+            
+            function checkSelection() {
+                if (courseSelect && courseSelect.value !== "") {
+                    startBtn.removeAttribute('disabled');
+                    startBtn.disabled = false;
+                } else if (startBtn) {
+                    startBtn.setAttribute('disabled', 'true');
+                    startBtn.disabled = true;
+                }
+            }
 
-        // Python'dan Enjekte Edilen Zaman Verileri
+            if (courseSelect) {
+                courseSelect.addEventListener('change', checkSelection);
+                checkSelection();
+            }
+        });
+
+        // Kronometre Döngü Yönetimi
         {% if active_session %}
             let timeSeconds = parseInt("{{ time_left }}");
             const mode = "{{ pomo_mode }}";
@@ -152,16 +252,18 @@
                 let hours = Math.floor(totalSecs / 3600);
                 let minutes = Math.floor((totalSecs % 3600) / 60);
                 let secs = totalSecs % 60;
-                document.getElementById('timerDisplay').innerHTML = 
-                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                
+                let displayElement = document.getElementById('timerDisplay');
+                if (displayElement) {
+                    displayElement.innerText = 
+                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                }
             }
 
             if (mode === 'pomodoro') {
-                // Geri sayım mantığı (Python'ın verdiği hedefe göre)
                 function runBackwards() {
                     if (timeSeconds <= 0) {
                         clearInterval(timerInterval);
-                        // Döngü tamamlandığında Python'ın yeni state'e geçmesi için sayfayı otomatik yeniliyoruz!
                         window.location.reload();
                         return;
                     }
@@ -171,7 +273,6 @@
                 timerInterval = setInterval(runBackwards, 1000);
                 runBackwards();
             } else {
-                // İleri sayım mantığı (Standart çalışma)
                 function runForwards() {
                     renderDisplay(timeSeconds);
                     timeSeconds++;
@@ -184,33 +285,36 @@
                 clearInterval(timerInterval);
             }
         {% endif %}
-    </script>
-    <div class="modal fade" id="addCourseModal" tabindex="-1" aria-labelledby="addCourseModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title" id="addCourseModalLabel">Add New Course</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="/add_course" method="POST">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Course Name</label>
-                            <input type="text" name="course_name" class="form-control" placeholder="e.g., Computer Architecture" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Course</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // ... (JS kodların burada devam ediyor) ...
+        // Hassas Saniye Gönderim Core Scripti
+        const endForm = document.getElementById('endSessionForm');
+        if (endForm) {
+            endForm.addEventListener('submit', function() {
+                const displayElement = document.getElementById('timerDisplay');
+                let totalSecs = 1; 
+
+                if (displayElement) {
+                    let display = displayElement.innerText.trim();
+                    let parts = display.split(':');
+                    
+                    if (parts.length === 3) {
+                        let hours = parseInt(parts[0], 10) || 0;
+                        let minutes = parseInt(parts[1], 10) || 0;
+                        let seconds = parseInt(parts[2], 10) || 0;
+                        
+                        totalSecs = (hours * 3600) + (minutes * 60) + seconds;
+                        
+                        let isPomodoro = "{{ session.get('pomo_mode') }}" === "pomodoro";
+                        if (isPomodoro) {
+                            totalSecs = (25 * 60) - totalSecs;
+                        }
+                    }
+                }
+                
+                if (totalSecs <= 0) totalSecs = 1;
+                document.getElementById('elapsed_seconds_input').value = totalSecs;
+            });
+        }
     </script>
 </body>
 </html>

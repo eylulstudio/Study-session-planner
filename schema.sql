@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS active_sessions;
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
     weekly_target INTEGER DEFAULT 600
 );
 
@@ -20,7 +21,7 @@ CREATE TABLE study_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     course_name TEXT NOT NULL,
-    duration_minutes INTEGER NOT NULL,
+    duration_seconds INTEGER NOT NULL,
     how_it_went TEXT,
     notes TEXT,
     end_time TEXT NOT NULL,

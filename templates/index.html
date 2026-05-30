@@ -11,6 +11,15 @@
         .card { border: none; border-radius: 12px; }
         .btn-modern { border-radius: 8px; padding: 10px 20px; font-weight: 600; }
         .timer-box { font-size: 3.5rem; letter-spacing: 2px; color: #1e293b; background: #e2e8f0; border-radius: 12px; padding: 15px; }
+        .custom-dropdown { position: relative; width: 100%; }
+        .custom-dropdown-menu { position: absolute; top: 100%; left: 0; width: 100%; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 1050; display: none; max-height: 250px; overflow-y: auto; padding: 0; margin-top: 4px; list-style: none; }
+        .dropdown-course-item { padding: 10px 15px; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-course-item:hover { background-color: #f1f5f9; }
+        .btn-delete-course { padding: 2px 8px; font-size: 0.75rem; border-radius: 4px; border: none; background-color: #fee2e2; color: #ef4444; transition: all 0.2s; }
+        .btn-delete-course:hover { background-color: #ef4444; color: white; }
+        .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .custom-modal-content { background: white; padding: 24px; border-radius: 14px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -27,86 +36,97 @@
     </nav>
 
     <div class="container">
+        <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 3000;">
+            <div id="liveToast" class="toast align-items-center border-0 shadow-lg" role="alert" style="background: #1e293b; color: white; border-radius: 12px;">
+                <div class="d-flex"><div class="toast-body" id="toastMessage"></div></div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 8px;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
         
         <div class="row mb-4">
-            <div class="col-md-12">
+            <div class="col-12">
                 <div class="card bg-white shadow-sm p-4 border-start border-primary border-5">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <small class="text-muted text-uppercase fw-bold d-block mb-1">Weekly Overview (Since Monday)</small>
                             <h2 class="fw-bold m-0 text-dark">{{ this_week_hours }} hours, {{ this_week_minutes }} minutes</h2>
                         </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm btn-modern" data-bs-toggle="modal" data-bs-target="#setGoalModal">
-                            ⚙️ Set Goal
-                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-modern" data-bs-toggle="modal" data-bs-target="#setGoalModal">⚙️ Set Goal</button>
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="row justify-content-center">
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
                 <div class="card shadow-sm bg-white">
                     <div class="card-body d-flex flex-column justify-content-center text-center p-4">
-                        
                         {% if not active_session %}
-                            <h4 class="fw-bold text-dark mb-4">Launch Study Session</h4>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="fw-bold text-dark m-0">Launch Study Session</h4>
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 0.8rem; border-radius: 6px;" onclick="openCourseModal()">+ New Course</button>
+                            </div>
                             <form action="/start" method="POST" id="startForm">
                                 <div class="mb-3 text-start">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label fw-bold small text-muted text-uppercase m-0">1. Select Course</label>
-                                        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 fw-bold" data-bs-toggle="modal" data-bs-target="#addCourseModal">
-                                            + New Course
+                                    <label class="form-label fw-bold small text-muted text-uppercase mb-2">1. Select Course</label>
+                                    <div class="custom-dropdown">
+                                        <button class="btn btn-white border w-100 text-start d-flex justify-content-between align-items-center" type="button" id="courseDropdownBtn" style="background-color: #fff; padding: 0.6rem 0.75rem; border-radius: 8px; border-color: #dee2e6; font-size: 1.15rem; color: #212529;">
+                                            <span id="selected-course-label">-- Choose a Course --</span>
+                                            <span style="font-size: 0.8rem;">▼</span>
                                         </button>
+                                        <input type="hidden" name="course_id" id="courseSelect" required>
+                                        <ul class="custom-dropdown-menu" id="myDropdownMenu">
+                                            <li class="dropdown-course-item text-muted" onclick="selectCourse('', '-- Choose a Course --')"><span>-- Choose a Course --</span></li>
+                                            {% for course in courses %}
+                                            <li class="dropdown-course-item text-dark fw-semibold" onclick="selectCourse('{{ course.id }}', '{{ course.course_name }}')">
+                                                <span>{{ course.course_name }}</span>
+                                                <button type="button" class="btn-delete-course" onclick="deleteCourse(event, '{{ course.id }}')">✕ Delete</button>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
                                     </div>
-                                    <select name="course_id" id="courseSelect" class="form-select form-select-lg" style="border-radius: 8px;" required>
-                                        <option value="" disabled selected>-- Choose a Course --</option>
-                                        {% for course in courses %}
-                                            <option value="{{ course.id }}">{{ course.course_name }}</option>
-                                        {% endfor %}
-                                    </select>
                                 </div>
                                 <div class="mb-4 text-start">
                                     <label class="form-label fw-bold small text-muted text-uppercase mb-2">2. Select Method</label>
                                     <div class="d-flex gap-2">
                                         <input type="radio" class="btn-check" name="study_mode" id="modeRegular" value="regular" checked autocomplete="off">
                                         <label class="btn btn-outline-secondary w-50 btn-modern" for="modeRegular">⏱️ Regular</label>
-
                                         <input type="radio" class="btn-check" name="study_mode" id="modePomodoro" value="pomodoro" autocomplete="off">
                                         <label class="btn btn-outline-secondary w-50 btn-modern" for="modePomodoro">🍅 Pomodoro</label>
                                     </div>
                                 </div>
-
-                                <button type="submit" id="startBtn" class="btn btn-primary btn-lg w-100 btn-modern shadow" disabled>
-                                    Start Session 🚀
-                                </button>
+                                <button type="submit" id="startBtn" class="btn btn-primary btn-lg w-100 btn-modern shadow" disabled>Start Session 🚀</button>
                             </form>
-
                         {% else %}
-                            {% if pomo_mode == 'pomodoro' %}
-                                {% if pomo_state == 'study' %}
-                                    <h5 class="text-danger fw-bold mb-1">🔥 Deep Work Block</h5>
-                                    <span class="badge bg-danger-subtle text-danger align-self-center mb-3">Study Mode</span>
+                            <div id="pomodoroHeaderArea">
+                                {% if pomo_mode == 'pomodoro' %}
+                                    {% if pomo_state == 'study' %}
+                                        <h5 class="text-danger fw-bold mb-1" id="pomoTitle">🔥 Deep Work Block</h5>
+                                        <span class="badge bg-danger-subtle text-danger align-self-center mb-3" id="pomoBadge">Study Mode</span>
+                                    {% else %}
+                                        <h5 class="text-warning fw-bold mb-1" id="pomoTitle">☕ Break Time</h5>
+                                        <span class="badge bg-warning-subtle text-warning align-self-center mb-3" id="pomoBadge">Rest Mode</span>
+                                    {% endif %}
                                 {% else %}
-                                    <h5 class="text-warning fw-bold mb-1">☕ Break Time</h5>
-                                    <span class="badge bg-warning-subtle text-warning align-self-center mb-3">Rest Mode</span>
+                                    <h5 class="text-success fw-bold mb-1">⚡ Standard Tracking</h5>
+                                    <span class="badge bg-success-subtle text-success align-self-center mb-3">Continuous Mode</span>
                                 {% endif %}
-                            {% else %}
-                                <h5 class="text-success fw-bold mb-1">⚡ Standard Tracking</h5>
-                                <span class="badge bg-success-subtle text-success align-self-center mb-3">Continuous Mode</span>
-                            {% endif %}
-
+                            </div>
                             <p class="text-muted mb-3">Current Target: <strong class="text-dark">{{ active_course }}</strong></p>
-                            
                             <div class="display-4 my-3 font-monospace fw-bold timer-box shadow-sm" id="timerDisplay">00:00:00</div>
-                            
                             <div class="d-flex gap-2 mt-3">
-                                <button type="button" id="togglePauseBtn" class="btn btn-warning btn-lg w-50 btn-modern shadow-sm" onclick="togglePause()">
-                                    ⏸️ Pause
-                                </button>
-                                <button type="button" class="btn btn-danger btn-lg w-50 btn-modern shadow-sm" data-bs-toggle="modal" data-bs-target="#reflectionModal" onclick="stopInterval()">
-                                    🛑 End Session
-                                </button>
+                                <button type="button" id="togglePauseBtn" class="btn btn-warning btn-lg w-50 btn-modern shadow-sm" onclick="togglePause()">⏸️ Pause</button>
+                                <button type="button" class="btn btn-danger btn-lg w-50 btn-modern shadow-sm" data-bs-toggle="modal" data-bs-target="#reflectionModal" onclick="handleEndSessionClick()">🛑 End Session</button>
                             </div>
                         {% endif %}
                     </div>
@@ -115,26 +135,27 @@
         </div>
     </div>
 
-    <div class="modal fade" id="setGoalModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content" style="border-radius: 14px;">
-                <div class="modal-header border-0 pb-0">
-                    <h6 class="modal-title fw-bold text-dark">Set Weekly Focus Goal</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="/update_target" method="POST">
-                    <div class="modal-body text-start">
-                        <label class="form-label small text-secondary fw-bold">Target Minutes</label>
-                        <input type="number" name="weekly_target" class="form-control" value="{{ weekly_target }}" min="1" required>
-                    </div>
-                    <div class="modal-footer border-0 pt-0">
-                        <button type="submit" class="btn btn-primary btn-sm w-100 btn-modern">Update Goal</button>
-                    </div>
-                </form>
+    <div class="custom-modal-overlay" id="customCourseModal">
+        <div class="custom-modal-content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark m-0">Add Custom Subject</h5>
+                <button type="button" class="btn-close" onclick="closeCourseModal()"></button>
             </div>
+            <form action="/add_course" method="POST">
+                <div class="mb-4 text-start">
+                    <label class="form-label fw-bold text-secondary small text-uppercase">Course Title</label>
+                    <input type="text" name="course_name" class="form-control" placeholder="e.g., Numerical Analysis" required minlength="2">
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light btn-modern" onclick="closeCourseModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-modern">Register Course</button>
+                </div>
+            </form>
         </div>
     </div>
 
+    <div class="modal fade" id="setGoalModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-header"><h6 class="modal-title">Set Goal</h6></div><form action="/update_target" method="POST"><div class="modal-body"><input type="number" name="weekly_target" class="form-control" value="{{ weekly_target }}"></div><div class="modal-footer"><button type="submit" class="btn btn-primary w-100">Update</button></div></form></div></div></div>
+    
     <div class="modal fade" id="reflectionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius: 14px;">
@@ -154,37 +175,15 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Notes & Achievements</label>
-                            <textarea name="notes" class="form-control" rows="3" placeholder="Specify milestones completed..."></textarea>
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Session Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="What did you achieve?"></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer border-0 pt-0">
-                        <button type="submit" class="btn btn-success w-100 btn-modern">Commit Session to DB</button>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success w-100 btn-modern">Commit Session</button>
                     </div>
-                    <input type="hidden" id="elapsed_seconds_input" name="elapsed_seconds" value="0">
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="addCourseModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border-radius: 14px;">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold text-dark">Add Custom Subject</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="/add_course" method="POST">
-                    <div class="modal-body text-start pt-0">
-                        <div class="mb-2">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Course Title</label>
-                            <input type="text" name="course_name" class="form-control" placeholder="e.g., Numerical Analysis" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0">
-                        <button type="button" class="btn btn-light btn-modern" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-modern">Register Course</button>
-                    </div>
+                    <input type="hidden" id="elapsed_seconds_input" name="elapsed_seconds">
+                    <input type="hidden" id="total_completed_pomodoros" name="completed_pomodoros">
                 </form>
             </div>
         </div>
@@ -192,86 +191,130 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const courseSelect = document.getElementById('courseSelect');
-            const startBtn = document.getElementById('startBtn');
-            function checkSelection() {
-                if (courseSelect && courseSelect.value !== "") {
-                    startBtn.removeAttribute('disabled');
-                    startBtn.disabled = false;
-                } else if (startBtn) {
-                    startBtn.setAttribute('disabled', 'true');
-                    startBtn.disabled = true;
-                }
+        function showNotification(msg) {
+            document.getElementById('toastMessage').innerText = msg;
+            new bootstrap.Toast(document.getElementById('liveToast')).show();
+        }
+
+        function deleteCourse(event, courseId) {
+            event.stopPropagation();
+            if (confirm("Are you sure you want to delete this course?")) {
+                const f = document.createElement('form'); f.method = 'POST'; f.action = `/delete_course/${courseId}`; document.body.appendChild(f); f.submit();
             }
-            if (courseSelect) {
-                courseSelect.addEventListener('change', checkSelection);
-                checkSelection();
-            }
-        });
+        }
+
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator(); osc.connect(ctx.destination);
+                osc.start(); setTimeout(() => osc.stop(), 600);
+            } catch (e) {}
+        }
+
         {% if active_session %}
             let timeSeconds = parseInt("{{ time_left }}");
             const mode = "{{ pomo_mode }}";
+            let currentPomoState = "{{ pomo_state }}";
             let timerInterval;
             let isPaused = false;
-            function renderDisplay(totalSecs) {
-                let hours = Math.floor(totalSecs / 3600);
-                let minutes = Math.floor((totalSecs % 3600) / 60);
-                let secs = totalSecs % 60;
-                let displayElement = document.getElementById('timerDisplay');
-                if (displayElement) {
-                    displayElement.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                }
-            }
+            
+            const initialTimeLeft = parseInt("{{ time_left }}");
+            let completedPomodoros = 0;
+
             function togglePause() {
                 const btn = document.getElementById('togglePauseBtn');
-                if (!isPaused) {
-                    isPaused = true;
+                isPaused = !isPaused;
+                if (isPaused) {
                     clearInterval(timerInterval);
                     btn.innerText = "▶️ Resume";
                     btn.classList.replace('btn-warning', 'btn-success');
+                    showNotification("Session paused.");
                 } else {
-                    isPaused = false;
-                    if (mode === 'pomodoro') { timerInterval = setInterval(runBackwards, 1000); }
-                    else { timerInterval = setInterval(runForwards, 1000); }
+                    timerInterval = setInterval(tick, 1000);
                     btn.innerText = "⏸️ Pause";
                     btn.classList.replace('btn-success', 'btn-warning');
+                    showNotification("Session resumed.");
                 }
             }
-            function runBackwards() {
-                if (timeSeconds <= 0) { clearInterval(timerInterval); window.location.reload(); return; }
-                renderDisplay(timeSeconds);
-                timeSeconds--;
+
+            function switchPomodoroPhase() {
+                playBeep();
+                
+                const titleEl = document.getElementById('pomoTitle');
+                const badgeEl = document.getElementById('pomoBadge');
+                
+                if (currentPomoState === 'study') {
+                    completedPomodoros++;
+                    currentPomoState = 'break';
+                    timeSeconds = 5 * 60;
+                    if(titleEl) titleEl.innerText = "☕ Break Time";
+                    if(badgeEl) {
+                        badgeEl.innerText = "Rest Mode";
+                        badgeEl.className = "badge bg-warning-subtle text-warning align-self-center mb-3";
+                    }
+                    showNotification("Break time started! ☕");
+                } else {
+                    currentPomoState = 'study';
+                    timeSeconds = 25 * 60;
+                    if(titleEl) titleEl.innerText = "🔥 Deep Work Block";
+                    if(badgeEl) {
+                        badgeEl.innerText = "Study Mode";
+                        badgeEl.className = "badge bg-danger-subtle text-danger align-self-center mb-3";
+                    }
+                    showNotification("Study block started! 🔥");
+                }
             }
-            function runForwards() {
-                renderDisplay(timeSeconds);
-                timeSeconds++;
+
+            function tick() {
+                if (mode === 'pomodoro') {
+                    if (timeSeconds <= 0) switchPomodoroPhase();
+                    timeSeconds--;
+                } else { 
+                    timeSeconds++; 
+                }
+                
+                let h = Math.floor(timeSeconds / 3600);
+                let m = Math.floor((timeSeconds % 3600) / 60);
+                let s = timeSeconds % 60;
+                
+                if (timeSeconds < 0 && mode === 'pomodoro') { h = 0; m = 0; s = 0; }
+                
+                document.getElementById('timerDisplay').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
             }
-            if (mode === 'pomodoro') { timerInterval = setInterval(runBackwards, 1000); runBackwards(); }
-            else { timerInterval = setInterval(runForwards, 1000); runForwards(); }
+            
+            function handleEndSessionClick() {
+                stopInterval();
+                
+                let elapsed = 0;
+                if (mode === 'pomodoro') {
+                    elapsed = initialTimeLeft - timeSeconds;
+                    if (elapsed < 0) elapsed = 0;
+                } else {
+                    elapsed = timeSeconds;
+                }
+                
+                document.getElementById('elapsed_seconds_input').value = elapsed;
+                document.getElementById('total_completed_pomodoros').value = completedPomodoros;
+            }
+
+            timerInterval = setInterval(tick, 1000);
             function stopInterval() { clearInterval(timerInterval); }
         {% endif %}
-        const endForm = document.getElementById('endSessionForm');
-        if (endForm) {
-            endForm.addEventListener('submit', function() {
-                const displayElement = document.getElementById('timerDisplay');
-                let totalSecs = 1;
-                if (displayElement) {
-                    let display = displayElement.innerText.trim();
-                    let parts = display.split(':');
-                    if (parts.length === 3) {
-                        let hours = parseInt(parts[0], 10) || 0;
-                        let minutes = parseInt(parts[1], 10) || 0;
-                        let seconds = parseInt(parts[2], 10) || 0;
-                        totalSecs = (hours * 3600) + (minutes * 60) + seconds;
-                        let isPomodoro = "{{ pomo_mode }}" === "pomodoro";
-                        if (isPomodoro) { totalSecs = (25 * 60) - totalSecs; }
-                    }
-                }
-                if (totalSecs <= 0) totalSecs = 1;
-                document.getElementById('elapsed_seconds_input').value = totalSecs;
-            });
-        }
+        
+        function openCourseModal() { document.getElementById('customCourseModal').style.display = 'flex'; }
+        function closeCourseModal() { document.getElementById('customCourseModal').style.display = 'none'; }
+        function selectCourse(id, name) { document.getElementById('courseSelect').value = id; document.getElementById('selected-course-label').innerText = name; document.getElementById('startBtn').disabled = false; document.getElementById('myDropdownMenu').style.display = 'none'; }
+        
+        document.getElementById('courseDropdownBtn').addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            const menu = document.getElementById('myDropdownMenu');
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        });
+        
+        document.addEventListener('click', () => {
+            const menu = document.getElementById('myDropdownMenu');
+            if(menu) menu.style.display = 'none';
+        });
     </script>
 </body>
 </html>

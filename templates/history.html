@@ -150,7 +150,7 @@
                                 <tr>
                                     <td class="p-3 fw-bold text-dark" style="font-size: 0.95rem;">{{ session.course_name }}</td>
                                     <td class="p-3">
-                                        {% set total_seconds = session.duration_minutes | int %}
+                                        {% set total_seconds = session.duration_seconds | int %}
                                         {% set hours = total_seconds // 3600 %}
                                         {% set minutes = (total_seconds % 3600) // 60 %}
                                         {% set seconds = total_seconds % 60 %}
